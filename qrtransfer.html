@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Transfer</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {font-family: Arial;}
+
+/* Style the tab */
+.tab {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+/* Style the buttons inside the tab */
+.tab button {
+    background-color: #446;
+	width: 50%;
+    float: center;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    font-size: 20px;
+	color: #fff;
+	box-shadow: 0 .375em .313em -0.313em rgba(0,0,0,.8), inset 0 .063em rgba(255,255,255,.4), inset 0 -0.188em rgba(0,0,0,.15);
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+    background-color: #335;
+	box-shadow: 0 .125em rgba(255,255,255,.4), inset 0 .063em rgba(255,255, 255,.4), inset 0 -0.188em #224;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+	box-shadow: inset 0 0 1.094em #001, inset 0 .063em #112, inset 0 -0.188em #224, 0 .063em rgba(255,255,255,.4); 
+    
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-top: none;
+}
+</style>
+</head>
+<body>
+
+<div class="tab">
+  <button class="tablinks" id="defaultOpen" onclick="openCity(event, 'Sender');scanner.stop()">Sender</button>
+  <button class="tablinks" onclick="openCity(event, 'Receiver');scanner.start()">Receiver</button>
+</div>
+
+<div id="Sender" class="tabcontent">
+<script type="text/javascript" src="qrgenerator.js"></script>
+<input type="file" id="targetfile" style="margin-top:15px;margin-bottom:20px;">
+<button onclick="previousqrcode()">Previous</button>
+<button onclick="nextqrcode()">Next <span id="qrnumber"></span></button>
+<div id="filecontents">
+    </div>
+<script type="text/javascript">
+var qrcount = 1;var x;var noofqr;
+window.onload = function () { 
+ //Check the support for the File API support 
+ if (window.File && window.FileReader && window.FileList && window.Blob) {
+    var fileSelected = document.getElementById('targetfile');
+    fileSelected.addEventListener('change', function (e) {
+		qrcount=1;x='';noofqr=1;
+         var fileTobeRead = fileSelected.files[0];
+		 var fileReader = new FileReader(); 
+		 
+        fileReader.onload = function (e) { 
+			var filename = fileTobeRead.name;
+			x = fileReader.result;
+			noofqr = Math.ceil(x.length/50)+1
+			var firstqr = '1,.,'+noofqr+',.,'+filename;
+			console.log(firstqr);
+			console.log(x);
+			console.log(x.length,noofqr);
+			qrcode.makeCode(firstqr);
+			document.getElementById('qrnumber').innerHTML = '('+qrcount+'/'+noofqr+')';
+			qrcount+=1;
+			 sett = setTimeout(myFunction, 3000);
+ 		 }
+		 
+		fileReader.readAsDataURL(fileTobeRead); 
+    }, false);
+} 
+ else { 
+     alert("Files are not supported"); 
+ } 
+ }
+ function nextqrcode(){
+	if (qrcount<=noofqr){
+		var temp = qrcount+',.,'+x.slice(((qrcount-1)*50)-50,(qrcount-1)*50);
+		console.log(temp);
+		qrcode.makeCode(temp);
+		document.getElementById('qrnumber').innerHTML = '('+qrcount+'/'+noofqr+')'
+		qrcount+=1;
+		}
+	else{clearInterval(myvarr);clearTimeout(sett);}
+ }
+function previousqrcode(){
+		var temp = qrcount+',.,'+x.slice(((qrcount-1)*50)-50,(qrcount-1)*50);
+		console.log(temp);
+		qrcode.makeCode(temp);
+		document.getElementById('qrnumber').innerHTML = '('+qrcount+'/'+noofqr+')'
+		qrcount-=1;
+
+ }
+ function myFunction(){
+ myvarr = setInterval(nextqrcode,1000);}
+ </script>
+<div id="qrcode1" ></div>
+<script type="text/javascript">
+var qrcode = new QRCode('qrcode1', {
+	//text : "your text here"
+	width : 300,
+	height : 300,
+	correctLevel : QRCode.CorrectLevel.M
+});
+</script>
+</div>
+
+<div id="Receiver" class="tabcontent">
+    <script type="text/javascript" src="qrscanner.js"></script>
+	<video id="preview"></video>
+	<span id="count">1</span>
+	<span id="data">data</span>
+    <script type="text/javascript">
+	let opts = {
+		  continuous: true,
+		  video: document.getElementById('preview'),
+		  mirror: false,
+		  captureImage: false,
+		  backgroundScan: false,
+		  refractoryPeriod: 50,
+		  scanPeriod: 1
+		};
+      let scanner = new Instascan.Scanner(opts);
+	  var qrcount =1;var x;var noofqr;var recdata=[];
+      scanner.addListener('scan', function (content) {
+		x = content.split(',.,');
+		if (qrcount==parseInt(x[0]) && qrcount==1){
+			noofqr = parseInt(x[1]);
+			filename = x[2];
+			qrcount+=1;
+			console.log(filename);
+		}
+		else {
+			if(qrcount==parseInt(x[0])){
+			recdata.push(x[1]);
+			//recdata=recdata.concat(x[1]);
+			qrcount+=1;
+			//console.log(recdata,qrcount,noofqr);
+			}
+		}
+		document.getElementById("count").innerHTML = '('+qrcount+'/'+noofqr+')';
+//        console.log(content);
+		if (qrcount==noofqr+1 && qrcount!=0){
+		var alldata = recdata.join('');
+		download(filename,alldata);
+		console.log('downloaded',alldata);
+		noofqr=1;qrcount=1}
+		});
+      Instascan.Camera.getCameras().then(function (cameras) {
+	  	  console.log(cameras.id);
+        if (cameras.length > 0) {
+          scanner.start(cameras[0]);
+        } else {
+          console.error('No cameras found.');
+        }
+      }).catch(function (e) {
+        console.error(e);
+      });
+	  function download(filename, text) {
+		  var element = document.createElement('a');
+		  element.setAttribute('href', text);
+		  element.setAttribute('download', filename);
+
+		  element.style.display = 'none';
+		  document.body.appendChild(element);
+
+		  element.click();
+
+		  document.body.removeChild(element);
+		}
+	
+    </script>
+
+</div>
+
+
+<script>
+function openCity(evt, cityName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(cityName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+
+var xyz= setTimeout(function(){document.getElementById("defaultOpen").click();},1000);
+
+navigator.getMedia = ( navigator.getUserMedia || // use the proper vendor prefix
+                       navigator.webkitGetUserMedia ||
+                       navigator.mozGetUserMedia ||
+                       navigator.msGetUserMedia);
+
+navigator.getMedia({video: true}, function() {
+  // webcam is available
+  console.log("Camera granted");
+}, function() {
+  // webcam is not available
+  document.getElementById("count").innerHTML = 'Please grant camera permission OR use Mozilla Firefox browser.';
+  document.getElementById("count").style.display = "inline-block";
+  document.getElementById("data").innerHTML = '';
+  console.log("camera not accessible");
+});
+</script>
+     
+
+ </body>
+</html>

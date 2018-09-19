@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Instascan</title>
+    <script type="text/javascript" src="instascan.min.js"></script>
+  </head>
+  <body>
+  <script src="/pages/navbar.js"></script>
+
+    <video id="preview"></video>
+	<span id="count">1</span>
+	<span id="data">data</span>
+    <script type="text/javascript">
+	let opts = {
+		  continuous: true,
+		  video: document.getElementById('preview'),
+		  mirror: false,
+		  captureImage: false,
+		  backgroundScan: false,
+		  refractoryPeriod: 50,
+		  scanPeriod: 1
+		};
+      let scanner = new Instascan.Scanner(opts);
+	  var qrcount =1;var x;var noofqr;var recdata=[];
+      scanner.addListener('scan', function (content) {
+	  
+		x = content.split(',.,');
+		if (qrcount==parseInt(x[0]) && qrcount==1){
+			noofqr = parseInt(x[1]);
+			filename = x[2];
+			qrcount+=1;
+			console.log(filename);
+		}
+		else {
+			if(qrcount==parseInt(x[0])){
+			recdata.push(x[1]);
+			//recdata=recdata.concat(x[1]);
+			qrcount+=1;
+			//console.log(recdata,qrcount,noofqr);
+			}
+		}
+		document.getElementById("count").innerHTML = '('+qrcount+'/'+noofqr+')';
+//        console.log(content);
+		if (qrcount==noofqr+1 && qrcount!=0){
+		var alldata = recdata.join('');
+		download(filename,alldata);
+		console.log('downloaded',alldata);
+		noofqr=1;qrcount=1}
+		});
+      Instascan.Camera.getCameras().then(function (cameras) {
+	  	  console.log(cameras.id);
+        if (cameras.length > 0) {
+          scanner.start(cameras[0]);
+        } else {
+          console.error('No cameras found.');
+        }
+      }).catch(function (e) {
+        console.error(e);
+      });
+
+	  function download(filename, text) {
+		  var element = document.createElement('a');
+		  element.setAttribute('href', text);
+		  element.setAttribute('download', filename);
+
+		  element.style.display = 'none';
+		  document.body.appendChild(element);
+
+		  element.click();
+
+		  document.body.removeChild(element);
+		}
+
+    </script>
+  </body>
+</html>
